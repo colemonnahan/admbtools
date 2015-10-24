@@ -1,6 +1,7 @@
 #' Read in the ADMB Hessian file.
 #'
 #' @template covariance_template
+#' @export
 get.admb.hes <- function(model.path=getwd()){
     wd.old <- getwd(); on.exit(setwd(wd.old))
     setwd(model.path)
@@ -19,6 +20,7 @@ get.admb.hes <- function(model.path=getwd()){
 #' Read in the ADMB covariance file.
 #'
 #' @template covariance_template
+#' @export
 get.admb.cov <- function(model.path=getwd()){
     wd.old <- getwd(); on.exit(setwd(wd.old))
     setwd(model.path)
@@ -37,6 +39,7 @@ get.admb.cov <- function(model.path=getwd()){
 #' Write a covariance matrix to the ADMB covariance file.
 #'
 #' @template covariance_template
+#' @export
 write.admb.cov <- function(cov.user, model.path=getwd()){
     temp <- file.exists(paste0(model.path, "/admodel.cov"))
     if(!temp) stop(paste0("Couldn't find file ",model.path, "/admodel.cov"))

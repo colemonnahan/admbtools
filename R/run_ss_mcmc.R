@@ -51,7 +51,7 @@
 #' @return Returns a list containing (1) the posterior draws, (2) and
 #' object of class 'admb', read in using the results read in using
 #' \code{read_admb}, and (3) some MCMC convergence diagnostics using CODA.
-run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
+run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
                           cov.user=NULL, init.pin=NULL, se.scale=NULL,
                           mcscale=FALSE,  mcseed=NULL, mcrb=NULL, mcdiag=FALSE,
                           mcprobe=NULL, verbose=TRUE, extra.args=NULL,
@@ -68,34 +68,33 @@ run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     ## Run to get MLE and covariance matrix
     if(estimate)
         system(model.name, ignore.stdout=T)
-    ## Grab original admb fit and metrics
-    mle <- read_admb(model.name)
-    ## If user provided covar matrix, write it to file and save to results
-    if(!is.null(cov.user)){
-        cor.user <- cov.user/ sqrt(diag(cov.user) %o% diag(cov.user))
-        if(!is.positive.definite(x=cor.user))
-            stop("Invalid cov.user matrix, not positive definite")
+    if(!is.null(cov.user))
         write.admb.cov(cov.user)
-        mle$cov.user <- cov.user
-    } else {
-    ## otherwise use the estimated one
-        mle$cov.user <-  NULL
-    }
+    ## ## Grab original admb fit and metrics
+    ## mle <- read_admb(model.name)
+    ## ## If user provided covar matrix, write it to file and save to results
+    ## if(!is.null(cov.user)){
+    ##     cor.user <- cov.user/ sqrt(diag(cov.user) %o% diag(cov.user))
+    ##     if(!is.positive.definite(x=cor.user))
+    ##         stop("Invalid cov.user matrix, not positive definite")
+    ##     write.admb.cov(cov.user)
+    ##     mle$cov.user <- cov.user
+    ## } else {
+    ## ## otherwise use the estimated one
+    ##     mle$cov.user <-  NULL
+    ## }
     ## Write the starting values to file. Always using a init.pin file b/c
     ## need to use -nohess -noest so that the cov.user can be specified and
     ## not overwritten. HOwever, this feature then starts the mcmc chain
     ## from the initial values instead of the MLEs. So let the user specify
     ## the init values, or specify the MLEs manually
-    if(is.null(init.pin)) init.pin <- mle$coefficients[1:mle$npar]
-    write.table(file="init.pin", x=init.pin, row.names=F, col.names=F)
+    ## if(is.null(init.pin)) init.pin <- mle$coefficients[1:mle$npar]
+    ## write.table(file="init.pin", x=init.pin, row.names=F, col.names=F)
     ## Separate the options by algorithm, first doing the shared arguments
-    cmd <- paste(model.name,"-mcmc",iterations)
-    ## If user written one, make sure not to overwrite it
-    if(!is.null(cov.user)) cmd <- paste(cmd, "-nohess")
-    cmd <- paste(cmd, "-mcpin init.pin")
+    cmd <- paste(model.name,"-noest -nohess -mcmc",iterations)
     if(!is.null(extra.args)) cmd <- paste(cmd, extra.args)
     if(!is.null(mcseed)) cmd <- paste(cmd, "-mcseed", mcseed)
-    if(mcdiag==TRUE) cmd <- paste(cmd, "-mcdiag")
+    if(mcdiag) cmd <- paste(cmd, "-mcdiag")
     if(!is.null(mcrb)) cmd <- paste(cmd, "-mcrb",mcrb)
     ## Those options for the standard MH algorithm
     if(!hybrid){
@@ -115,39 +114,23 @@ run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     ## Scale the covariance matrix
     if(!is.null(se.scale)) SetScale(se.scale) # change the covariance matrix
     ## Run it and get results
-    system(cmd, ignore.stdout=T)
+    system(cmd, ignore.stdout=TRUE)
     if(mceval)
         system(paste(model.name, "-mceval -noest -nohess"), ignore.stdout=T)
-    psv <- file(paste0(model.name, ".psv"), "rb")
-    nparams <- readBin(psv, "integer", n=1)
-    mcmc <- matrix(readBin(psv, "numeric", n=nparams*(Nout+burn.in)), ncol=nparams,
-                   byrow=TRUE)
-    close(psv)
-    mcmc <- as.data.frame(mcmc)
-    if(!is.null(mle)){
-        names(mcmc) <- names(with(mle, coefficients[1:npar]))
-    }
-    ## If mcrb is used, read  that in for plotting. It's in the corrtest file.
-    if(!is.null(mcrb)){
-        L <- readLines('corrtest')
-        st <- grep("modified S", L)[1]+1
-        en <- grep("S* modified S", L)-1
-        L <- gsub("^\\s+|\\s+$", "", L[st:en])
-        cov.mcrb <- do.call(rbind, lapply(strsplit(L, " "), as.numeric))
-        cor.mcrb <- cov.mcrb/(sqrt(diag(cov.mcrb) %o% diag(cov.mcrb)))
-        if(!is.positive.definite(cor.mcrb))
-            warning("the modified mcrb covariance matrix read in was not positive definite")
-        else mle$cov.user <- cov.mcrb
-    }
+    mcmc <- read_psv(model.name)
+    ## if(!is.null(mle)){
+    ##     names(mcmc) <- names(with(mle, coefficients[1:npar]))
+    ## }
+    ## ## If mcrb is used, read  that in for plotting. It's in the corrtest file.
     ## Remove the 'burn in' specified by user
     if(burn.in>0) mcmc <- mcmc[-(1:burn.in),]
-    ## Run effective sample size calcs from CODA, metric of convergence
-    efsize <- data.frame(t(effectiveSize(mcmc)/NROW(mcmc)))
-    names(efsize) <- paste0(names(mcmc), "_efs")
-    results <- list(mcmc=mcmc, mle=mle)
-    results$diag <- list(efsize=efsize)
-    class(results) <- 'admb_mcmc'
-    return(results)
+    ## ## Run effective sample size calcs from CODA, metric of convergence
+    ## efsize <- data.frame(t(effectiveSize(mcmc)/NROW(mcmc)))
+    ## names(efsize) <- paste0(names(mcmc), "_efs")
+    ## results <- list(mcmc=mcmc, mle=mle)
+    ## results$diag <- list(efsize=efsize)
+    ## class(results) <- 'admb_mcmc'
+    return(mcmc)
 }
 
 
