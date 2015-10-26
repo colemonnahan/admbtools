@@ -114,6 +114,7 @@ run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     ## Scale the covariance matrix
     if(!is.null(se.scale)) SetScale(se.scale) # change the covariance matrix
     ## Run it and get results
+
     system(cmd, ignore.stdout=TRUE)
     if(mceval)
         system(paste(model.name, "-mceval -noest -nohess"), ignore.stdout=T)
