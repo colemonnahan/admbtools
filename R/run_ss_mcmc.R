@@ -118,7 +118,7 @@ run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     system(cmd, ignore.stdout=TRUE)
     if(mceval)
         system(paste(model.name, "-mceval -noest -nohess"), ignore.stdout=T)
-    mcmc <- read_psv(model.name)
+    mcmc <- R2admb::read_psv(model.name)
     ## if(!is.null(mle)){
     ##     names(mcmc) <- names(with(mle, coefficients[1:npar]))
     ## }
