@@ -28,10 +28,12 @@ get.admb.cov <- function(model.path=getwd()){
     on.exit(close(filename), add=TRUE)
     num.pars <- readBin(filename, "integer", 1)
     cov.vec <- readBin(filename, "numeric", num.pars^2)
-    cov <- matrix(cov.vec, ncol=num.pars, nrow=num.pars)
+    cov.unbounded <- matrix(cov.vec, ncol=num.pars, nrow=num.pars)
     hybrid_bounded_flag <- readBin(filename, "integer", 1)
     scale <- readBin(filename, "numeric", num.pars)
-    result <- list(num.pars=num.pars, cov=cov,
+    cov.bounded <- cov.unbounded*(scale %o% scale)
+    result <- list(num.pars=num.pars, cov.bounded=cov.bounded,
+                   cov.unbounded=cov.unbounded,
                    hybrid_bounded_flag=hybrid_bounded_flag, scale=scale)
     return(result)
 }
