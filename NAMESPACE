@@ -3,6 +3,8 @@
 export(get.admb.cov)
 export(get.admb.hes)
 export(pairs_admb)
+export(pairs_ss)
 export(run_admb_mcmc)
 export(run_ss_mcmc)
+export(run_ss_mcmc_parallel)
 export(write.admb.cov)

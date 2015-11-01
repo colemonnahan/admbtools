@@ -69,7 +69,7 @@ run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     if(estimate)
         system(model.name, ignore.stdout=T)
     if(!is.null(cov.user))
-        write.admb.cov(cov.user)
+        write.admb.cov(cov.user*se.scale)
     ## ## Grab original admb fit and metrics
     ## mle <- read_admb(model.name)
     ## ## If user provided covar matrix, write it to file and save to results
@@ -111,8 +111,6 @@ run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     }
     ## The command is constructed.
     if(verbose) print(cmd)
-    ## Scale the covariance matrix
-    if(!is.null(se.scale)) SetScale(se.scale) # change the covariance matrix
     ## Run it and get results
 
     system(cmd, ignore.stdout=TRUE)
@@ -135,3 +133,23 @@ run_ss_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
 }
 
 
+#' A wrapper for running SS models in parallel
+#' @export
+run_ss_mcmc_parallel <- function(parallel_number, Nout, mcsave, burn.in, cov.user=NULL,
+                                 extra.args=NULL, seed, se.scale=1){
+    olddir <- getwd()
+    on.exit(setwd(olddir))
+    newdir <- paste0(getwd(),'/model',parallel_number)
+    if(dir.exists(newdir)) unlink(newdir, TRUE)
+    dir.create(newdir)
+    trash <- file.copy(from=list.files('model', full.names=TRUE), to=newdir)
+    ## delay in case indexing ties up files briefly
+    Sys.sleep(1)
+    time <- system.time(xx <-
+        admbtools::run_ss_mcmc(model.path=newdir, model.name='model',
+                               Nout=Nout, mcsave=mcsave, burn.in=burn.in,
+                               mcseed=seed, extra.args=extra.args,
+                               cov.user=cov.user, se.scale=se.scale))
+    message(time)
+    cbind(parallel_number=parallel_number, iteration=1:nrow(xx), xx)
+}

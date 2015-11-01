@@ -5,9 +5,15 @@
 #'
 #' @param posterior Dataframe containing the MCMC output, as read in using
 #' function \link{\code{run.mcmc}}
+#' @param mle A list as read in by \code{\link{r4ss::read.admbFit}}. It
+#' uses the parameter estimates and covariance and correlation matrices as
+#' estimated asymptotically.
 #' @param diag What type of plot to include on the diagonal, options are
 #' 'acf' which plots the autocorrelation function \code{acf}, 'hist' shows
 #' marginal posterior histograms, and 'trace' the trace plot.
+#' @param which.keep A vector of integers representing which parameters to
+#' subset. Useful if the model has a larger number of parameters and you
+#' just want to show a few.
 #' @param acf.ylim If using the acf function on the diagonal, specify the y
 #' limit. The default is c(-1,1).
 #' @param ymult A vector of length ncol(posterior) specifying how much room to
@@ -18,28 +24,30 @@
 #' @return Produces a plot, and returns nothing.
 #' @author Cole Monnahan
 #' @export
-pairs_ss <- function(posterior, mle, cov.mle, diag=c("acf","hist", "trace"),
-                       acf.ylim=c(-1,1), ymult=NULL, axis.col=gray(.5),
-                       limits=NULL, ...){
+pairs_ss <- function(posterior, mle, diag=c("acf","hist", "trace"),
+                     acf.ylim=c(-1,1), ymult=NULL, axis.col=gray(.5),
+                     which.keep=NULL,label.cex=.5, limits=NULL, ...){
     ## reset to old par when exiting
     old.par <- par(no.readonly=TRUE)
     on.exit(par(old.par))
     diag <- match.arg(diag)
-    posterior.names <- names(posterior)
-    n <- NCOL(posterior)
-    left off here need to get proper data extracted from the mle object
-    if(n != mle$nopar)
+    if(NCOL(posterior) != mle$nopar)
         stop("Number of parameters in posterior and mle not the same")
-    mle.se <- mle$std[1:n]
-    mle.se <- sqrt(diag(cov.mle))
+    ## subset parameters down in case too many
+    if(is.null(which.keep)) which.keep <- 1:NCOL(posterior)
+    par.names <- mle$names[which.keep]
+    n <- length(par.names)
     if(n==1) stop("This function is only meaningful for >1 parameter")
+    mle.par <- mle$est[which.keep]
+    mle.se <- mle$std[which.keep]
+    posterior <- posterior[,which.keep]
     if(is.null(ymult)) ymult <- rep(1.3, n)
     ## If no limits given, calculate the max range of the posterior samples and
     ## parameter confidence interval
     if(is.null(limits)){
         limits <- list()
         for(i in 1:n){
-            limit.temp <- mle[i]+c(-1,1)*1.96*mle.se[i]
+            limit.temp <- mle.par[i]+c(-1,1)*1.96*mle.se[i]
             ## multiplier for the ranges, adjusts the whitespace around the
             ## plots
             min.temp <- min(posterior[,i], limit.temp[1])
@@ -82,7 +90,7 @@ pairs_ss <- function(posterior, mle, cov.mle, diag=c("acf","hist", "trace"),
                          ann=F, ylim=limits[[row]])
                     temp.box()
                 }
-                mtext(posterior.names[row], line=-2)
+                mtext(par.names[row], line=-2, cex=label.cex)
             }
             ## If lower triangle add scatterplot
             if(row>col){
@@ -96,19 +104,18 @@ pairs_ss <- function(posterior, mle, cov.mle, diag=c("acf","hist", "trace"),
                        pch=16, cex=1, col=2)
                 ## Get points of a bivariate normal 95% confidence contour
                 ellipse.temp <- ellipse::ellipse(x=mle$cor[col, row],
-                                       scale=mle$se[1:mle$npar][c(col, row)],
-                                       centre= mle$coefficients[c(col, row)], npoints=1000,
+                                       scale=mle.se[c(col, row)],
+                                       centre= mle.par[c(col, row)], npoints=1000,
                                        level=.95)
                 lines(ellipse.temp , lwd=1.5, lty=1, col="red")
-                if(!is.null(mle$cov.user)){
-                    se.user <- sqrt(diag(mle$cov.user))
-                    cor.user <- mle$cov.user/(se.user %o% se.user)
-                    lines(ellipse::ellipse(
-                        x=cor.user[col, row],
-                        scale=se.user[c(col, row)],
-                        centre= mle$coefficient[c(col, row)], npoints=1000,
-                        level=.95) , lwd=1.5, lty=1, col="blue")
-                }
+                ## if(!is.null(mle$cov.user)){
+                ##     cor.user <- cov.mle/(mle.se %o% mle.se)
+                ##     lines(ellipse::ellipse(
+                ##         x=cor.user[col, row],
+                ##         scale=mle.se[c(col, row)],
+                ##         centre= mle$coefficient[c(col, row)], npoints=1000,
+                ##         level=.95) , lwd=1.5, lty=1, col="blue")
+                ## }
                 par(xaxs="i", yaxs="i")
                 temp.box()
             }
@@ -138,7 +145,6 @@ pairs_ss <- function(posterior, mle, cov.mle, diag=c("acf","hist", "trace"),
                 par( mgp=c(.05, ifelse(row %% 2 ==1, .15, .65),0) )
                 axis(2, col=axis.col, lwd=.5)
             }
-
         }
     }
 }

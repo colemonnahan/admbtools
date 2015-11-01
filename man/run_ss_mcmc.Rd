@@ -7,7 +7,7 @@ fits and covariance/correlation matrices, and some MCMC convergence
 diagnostics using CODA.}
 \usage{
 run_ss_mcmc(model.path, model.name, Nout, mcsave, burn.in, cov.user = NULL,
-  init.pin = NULL, se.scale = NULL, mcscale = FALSE, mcseed = NULL,
+  init.pin = NULL, se.scale = NULL, mcscale = TRUE, mcseed = NULL,
   mcrb = NULL, mcdiag = FALSE, mcprobe = NULL, verbose = TRUE,
   extra.args = NULL, hybrid = FALSE, hyeps = NULL, hynstep = NULL,
   mceval = FALSE, estimate = FALSE)
