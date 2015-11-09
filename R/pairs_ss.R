@@ -40,6 +40,7 @@ pairs_ss <- function(posterior, mle, diag=c("acf","hist", "trace"),
     if(n==1) stop("This function is only meaningful for >1 parameter")
     mle.par <- mle$est[which.keep]
     mle.se <- mle$std[which.keep]
+    mle.cor <- mle$cor[which.keep, which.keep]
     posterior <- posterior[,which.keep]
     if(is.null(ymult)) ymult <- rep(1.3, n)
     ## If no limits given, calculate the max range of the posterior samples and
@@ -96,26 +97,18 @@ pairs_ss <- function(posterior, mle, diag=c("acf","hist", "trace"),
             if(row>col){
                 par(xaxs="r", yaxs="r")
                 plot(x=posterior[,col], y=posterior[,row], axes=FALSE, ann=FALSE,
-                     pch=ifelse(NROW(posterior)>=5000,".", 1), col=1,
-                     xlim=limits[[col]], ylim=limits[[row]])
+                     pch=ifelse(NROW(posterior)>=5000,".", 1),
+                     xlim=limits[[col]], ylim=limits[[row]], ...)
                 ## Add bivariate 95% normal levels for both the MLE
                 ## estimated covariance, but also the user supplied cov.user
-                points(x=mle$coefficients[col], y=mle$coefficients[row],
-                       pch=16, cex=1, col=2)
+                points(x=mle.par[col], y=mle.par[row],
+                       pch=16, cex=.1, col=2)
                 ## Get points of a bivariate normal 95% confidence contour
-                ellipse.temp <- ellipse::ellipse(x=mle$cor[col, row],
+                ellipse.temp <- ellipse::ellipse(x=mle.cor[col, row],
                                        scale=mle.se[c(col, row)],
                                        centre= mle.par[c(col, row)], npoints=1000,
                                        level=.95)
                 lines(ellipse.temp , lwd=1.5, lty=1, col="red")
-                ## if(!is.null(mle$cov.user)){
-                ##     cor.user <- cov.mle/(mle.se %o% mle.se)
-                ##     lines(ellipse::ellipse(
-                ##         x=cor.user[col, row],
-                ##         scale=mle.se[c(col, row)],
-                ##         centre= mle$coefficient[c(col, row)], npoints=1000,
-                ##         level=.95) , lwd=1.5, lty=1, col="blue")
-                ## }
                 par(xaxs="i", yaxs="i")
                 temp.box()
             }
