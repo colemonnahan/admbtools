@@ -6,7 +6,7 @@
 #' indicates the current folder.
 #' @param mode.name (Character) The name of the model executable. A character string,
 #' without '.exe'.
-#' @param Nout (Integer) The number of draws after thinning and burn in.
+#' @param iter (Integer) The number of draws after thinning and burn in.
 #' @param mcsave (Integer) Controls thinning of samples. Save every mcsave
 #' value, such that 1 corresponds to keeping all draws, and 100 saving
 #' every 100th draw.
@@ -51,7 +51,7 @@
 #' @return Returns a list containing (1) the posterior draws, (2) and
 #' object of class 'admb', read in using the results read in using
 #' \code{read_admb}, and (3) some MCMC convergence diagnostics using CODA.
-run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
+run_admb_mcmc <- function(model.path, model.name, iter, mcsave, burn.in,
                           cov.user=NULL, init.pin=NULL, se.scale=NULL,
                           mcscale=FALSE,  mcseed=NULL, mcrb=NULL, mcdiag=FALSE,
                           mcprobe=NULL, verbose=TRUE, extra.args=NULL,
@@ -60,7 +60,7 @@ run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
     ## This function runs an ADMB model MCMC, burns and thins, calculates
     ## effective sizes, and returns stuff depending on verbose.
     ## browser()
-    iterations <- (Nout+burn.in)*mcsave
+    iterations <- (iter+burn.in)*mcsave
     if(iterations <1) stop(paste0("Iterations too low: ", iterations))
     if(verbose) print(paste("Run started at", round(Sys.time())))
     wd.old <- getwd(); on.exit(setwd(wd.old))
@@ -120,7 +120,7 @@ run_admb_mcmc <- function(model.path, model.name, Nout, mcsave, burn.in,
         system(paste(model.name, "-mceval -noest -nohess"), ignore.stdout=T)
     psv <- file(paste0(model.name, ".psv"), "rb")
     nparams <- readBin(psv, "integer", n=1)
-    mcmc <- matrix(readBin(psv, "numeric", n=nparams*(Nout+burn.in)), ncol=nparams,
+    mcmc <- matrix(readBin(psv, "numeric", n=nparams*(iter+burn.in)), ncol=nparams,
                    byrow=TRUE)
     close(psv)
     mcmc <- as.data.frame(mcmc)
